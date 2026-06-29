@@ -5,21 +5,37 @@ struct PlayerBar: View {
     @ObservedObject var playerVM: PlayerViewModel
     let tracks: [Track]
     @Binding var selectedTrackID: UUID?
+    @ObservedObject var eqManager = EqualizerManager.shared
+    
+    @State private var showEQ = false
+    @State private var isHoveringProgress = false
     
     var body: some View {
         VStack(spacing: 0) {
+            // Прогресс-бар
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(Color.white.opacity(0.1))
-                        .frame(height: 3)
+                        .frame(height: isHoveringProgress ? 6 : 3)
                     
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(Color.accent)
-                        .frame(width: max(0, geo.size.width * CGFloat(playerVM.progress)), height: 3)
-                        .animation(.linear(duration: 0.05), value: playerVM.progress)
+                        .frame(width: max(0, geo.size.width * CGFloat(playerVM.progress)), height: isHoveringProgress ? 6 : 3)
+                        .animation(.easeOut(duration: 0.15), value: isHoveringProgress)
                 }
+                .frame(height: isHoveringProgress ? 14 : 8)
                 .contentShape(Rectangle())
+                .onHover { hovering in
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        isHoveringProgress = hovering
+                    }
+                    if hovering {
+                        NSCursor.pointingHand.set()
+                    } else {
+                        NSCursor.arrow.set()
+                    }
+                }
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
@@ -28,10 +44,10 @@ struct PlayerBar: View {
                         }
                 )
             }
-            .frame(height: 8)
             .padding(.horizontal, 14)
             .padding(.top, 6)
             
+            // Кнопки и информация
             HStack(spacing: 0) {
                 trackInfo.frame(width: 180, alignment: .leading)
                 Spacer()
@@ -61,7 +77,6 @@ struct PlayerBar: View {
                     }
                     .disabled(currentIndex == nil || (playerVM.repeatMode == .off && !playerVM.shuffleMode && currentIndex == tracks.count - 1 && playerVM.queue.isEmpty))
                     
-                    // Shuffle
                     Button(action: {
                         playerVM.shuffleMode.toggle()
                         playerVM.saveState()
@@ -72,7 +87,6 @@ struct PlayerBar: View {
                     }
                     .buttonStyle(.plain)
                     
-                    // Repeat
                     Button(action: {
                         switch playerVM.repeatMode {
                         case .off: playerVM.repeatMode = .all
@@ -92,14 +106,24 @@ struct PlayerBar: View {
                 Spacer()
                 
                 HStack(spacing: 12) {
+                    Button(action: { showEQ.toggle() }) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(eqManager.isEnabled ? .accent : .textMuted)
+                    }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showEQ) {
+                        EqualizerView()
+                    }
+                    
                     HStack(spacing: 6) {
                         Image(systemName: playerVM.volume == 0 ? "speaker.slash.fill" : "speaker.fill")
                             .font(.system(size: 10)).foregroundColor(.textMuted.opacity(0.5)).frame(width: 14)
-                        Slider(value: $playerVM.volume, in: 0...1).frame(width: 100).tint(.accent)
+                        Slider(value: $playerVM.volume, in: 0...1).frame(width: 80).tint(.accent)
                     }
                     timeDisplay
                 }
-                .frame(width: 210, alignment: .trailing)
+                .frame(width: 250, alignment: .trailing)
             }
             .padding(.horizontal, 18).padding(.bottom, 10)
         }

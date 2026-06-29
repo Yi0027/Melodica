@@ -5,6 +5,7 @@ import Combine
 @MainActor
 final class LibraryViewModel: ObservableObject {
     @Published var tracks: [Track] = []
+    @Published var playlists: [(name: String, tracks: [Track])] = []
     @Published var searchText = ""
     @Published var sortField: Track.SortField = .album
     @Published var sortAscending = true
@@ -66,6 +67,8 @@ final class LibraryViewModel: ObservableObject {
                 cmp = (a.year ?? .max) < (b.year ?? .max)
             case .duration:
                 cmp = a.duration < b.duration
+            case .playlists:
+                cmp = false
             }
             return sortAscending ? cmp : !cmp
         }
@@ -111,12 +114,10 @@ final class LibraryViewModel: ObservableObject {
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else {
-            print("❌ Не удалось создать enumerator")
             isLoading = false
             return
         }
         
-        // ✅ Собираем все URL на главном потоке (потокобезопасно)
         var allURLs: [URL] = []
         for case let url as URL in enumerator {
             let ext = url.pathExtension.lowercased()
@@ -125,21 +126,14 @@ final class LibraryViewModel: ObservableObject {
             }
         }
         
-        print("📊 Найдено файлов: \(allURLs.count)")
-        
-        // ✅ Обрабатываем в фоновом потоке
         let urls = allURLs
         Task.detached(priority: .userInitiated) {
             var loaded: [Track] = []
-            
             for url in urls {
                 if let track = await MetadataReader.readTrack(from: url) {
                     loaded.append(track)
                 }
             }
-            
-            print("📊 Загружено треков: \(loaded.count)")
-            
             await MainActor.run {
                 self.tracks = loaded
                 self.isLoading = false
@@ -147,12 +141,44 @@ final class LibraryViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Плейлисты
+    
+    func importM3U(_ url: URL) {
+        let (name, trackURLs) = M3UParser.parse(url)
+        
+        Task.detached(priority: .userInitiated) {
+            var loaded: [Track] = []
+            
+            for url in trackURLs {
+                if let track = await MetadataReader.readTrack(from: url) {
+                    loaded.append(track)
+                }
+            }
+            
+            await MainActor.run {
+                // Добавляем в библиотеку только новые треки
+                for track in loaded {
+                    if !self.tracks.contains(where: { $0.url.path == track.url.path }) {
+                        self.tracks.append(track)
+                    }
+                }
+                
+                // Создаём плейлист
+                let playlist = (name, loaded)
+                self.playlists.append(playlist)
+            }
+        }
+    }
+    
+    func exportM3U(for playlist: (name: String, tracks: [Track]), to url: URL) {
+        M3UParser.export(playlist: playlist, to: url)
+    }
+    
+    // MARK: - Восстановление папки
+    
     func restoreLastFolder() -> URL? {
         guard let state = PlayerStateManager.shared.load(),
-              let bookmarkData = state.lastFolderBookmark else {
-            print("❌ Нет bookmark'а")
-            return nil
-        }
+              let bookmarkData = state.lastFolderBookmark else { return nil }
         
         var isStale = false
         guard let url = try? URL(
@@ -160,20 +186,10 @@ final class LibraryViewModel: ObservableObject {
             options: .withSecurityScope,
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
-        ) else {
-            print("❌ Не удалось разрешить bookmark")
-            return nil
-        }
-        
-        if isStale {
-            print("⚠️ Bookmark устарел")
-        }
+        ) else { return nil }
         
         var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
-            print("❌ Папка не существует: \(url.path)")
-            return nil
-        }
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else { return nil }
         
         return url
     }

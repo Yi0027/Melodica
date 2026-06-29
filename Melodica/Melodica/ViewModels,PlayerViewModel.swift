@@ -13,6 +13,32 @@ final class PlayerViewModel: ObservableObject {
     @Published var repeatMode: RepeatMode = .off
     @Published var shuffleMode: Bool = false
     @Published var favorites: [Track] = []
+    @Published var playbackMode: PlaybackMode = .library
+    
+    enum PlaybackMode: Equatable {
+        case library
+        case album([Track])
+        case playlist([Track], name: String)
+        case queue
+        
+        var tracks: [Track] {
+            switch self {
+            case .library: return []
+            case .album(let tracks): return tracks
+            case .playlist(let tracks, _): return tracks
+            case .queue: return []
+            }
+        }
+        
+        var name: String {
+            switch self {
+            case .library: return "Library"
+            case .album: return "Album"
+            case .playlist(_, let name): return name
+            case .queue: return "Queue"
+            }
+        }
+    }
     
     enum RepeatMode: String, Codable {
         case off, one, all

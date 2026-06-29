@@ -28,5 +28,6 @@ struct Track: Identifiable, Hashable {
         case genre = "Жанр"
         case year = "Год"
         case duration = "Длительность"
+        case playlists = "Плейлисты"  // ✅
     }
 }

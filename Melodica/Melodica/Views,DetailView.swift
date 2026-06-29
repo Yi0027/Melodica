@@ -16,7 +16,6 @@ struct DetailView: View {
             if let track = track {
                 if !lyrics.isEmpty && !showQueue {
                     VStack(spacing: 0) {
-                        // Кнопка очереди — зафиксирована сверху
                         HStack {
                             Spacer()
                             Button(action: { showQueue.toggle() }) {
@@ -38,7 +37,6 @@ struct DetailView: View {
                         .padding(.top, 8)
                         .padding(.bottom, 4)
                         
-                        // Сплиттер
                         SplitView(
                             topView: trackInfoView(track: track, artSize: 260, compact: true)
                                 .padding(.horizontal, 24),
@@ -105,7 +103,7 @@ struct DetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .shadow(color: .black.opacity(0.3), radius: 15, y: 8)
             
-            VStack(spacing: compact ? 3 : 6) {
+            VStack(spacing: compact ? 6 : 10) {  // ✅ Увеличены отступы
                 Text(track.title)
                     .font(.system(size: compact ? 18 : 20, weight: .bold))
                     .foregroundColor(.textMain)
@@ -124,6 +122,7 @@ struct DetailView: View {
                 }
                 
                 tagsRow(track: track)
+                    .padding(.top, 2)  // ✅ Дополнительный отступ
             }
             Spacer()
         }
@@ -212,7 +211,7 @@ struct DetailView: View {
     }
     
     private func tagsRow(track: Track) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {  // ✅ Увеличен отступ
             if let genre = track.genre, !genre.isEmpty {
                 Text(genre)
                     .font(.system(size: 11))

@@ -97,6 +97,7 @@ struct ColorRow: View {
     
     var body: some View {
         HStack(spacing: 8) {
+            // Превью цвета
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color(red: r, green: g, blue: b).opacity(alpha?.wrappedValue ?? 1.0))
                 .frame(width: 24, height: 24)
@@ -110,17 +111,26 @@ struct ColorRow: View {
                 .foregroundColor(.white.opacity(0.7))
                 .frame(width: 80, alignment: .leading)
             
-            // RGB
+            // RGB поля
             HStack(spacing: 4) {
-                TextField("0-255", value: Binding(get: { Int(r * 255) }, set: { r = Double($0) / 255.0 }), format: .number)
+                TextField("0-255", value: Binding(
+                    get: { Int(r * 255) },
+                    set: { r = Double(min(max($0, 0), 255)) / 255.0 }
+                ), format: .number)
                     .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
                     .frame(width: 45).padding(4).background(Color.white.opacity(0.05)).cornerRadius(4)
                 
-                TextField("0-255", value: Binding(get: { Int(g * 255) }, set: { g = Double($0) / 255.0 }), format: .number)
+                TextField("0-255", value: Binding(
+                    get: { Int(g * 255) },
+                    set: { g = Double(min(max($0, 0), 255)) / 255.0 }
+                ), format: .number)
                     .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
                     .frame(width: 45).padding(4).background(Color.white.opacity(0.05)).cornerRadius(4)
                 
-                TextField("0-255", value: Binding(get: { Int(b * 255) }, set: { b = Double($0) / 255.0 }), format: .number)
+                TextField("0-255", value: Binding(
+                    get: { Int(b * 255) },
+                    set: { b = Double(min(max($0, 0), 255)) / 255.0 }
+                ), format: .number)
                     .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
                     .frame(width: 45).padding(4).background(Color.white.opacity(0.05)).cornerRadius(4)
             }
@@ -131,7 +141,10 @@ struct ColorRow: View {
                     Text(LocalizedStringKey("transparency_short"))
                         .font(.system(size: 8))
                         .foregroundColor(.white.opacity(0.35))
-                    TextField("0-100", value: Binding(get: { Int(alpha.wrappedValue * 100) }, set: { alpha.wrappedValue = Double($0) / 100.0 }), format: .number)
+                    TextField("0-100", value: Binding(
+                        get: { Int(alpha.wrappedValue * 100) },
+                        set: { alpha.wrappedValue = Double(min(max($0, 0), 100)) / 100.0 }
+                    ), format: .number)
                         .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
                         .frame(width: 45).padding(4).background(Color.white.opacity(0.05)).cornerRadius(4)
                 }

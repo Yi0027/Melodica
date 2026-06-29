@@ -1,5 +1,6 @@
 // Views,ContentView.swift
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @ObservedObject var libraryVM: LibraryViewModel
@@ -91,6 +92,10 @@ struct ContentView: View {
             }
         }
         .background(Color.darkBg)
+        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            handleDrop(providers: providers)
+            return true
+        }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button(action: openFolder) {
@@ -126,6 +131,39 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
     }
     
+    // MARK: - Drag & Drop
+    
+    private func handleDrop(providers: [NSItemProvider]) {
+        for provider in providers {
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { (item, error) in
+                guard let data = item as? Data,
+                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                
+                DispatchQueue.main.async {
+                    let ext = url.pathExtension.lowercased()
+                    var isDirectory: ObjCBool = false
+                    FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+                    
+                    if isDirectory.boolValue {
+                        libraryVM.loadFolder(url)
+                    } else if ext == "m3u" || ext == "m3u8" {
+                        libraryVM.importM3U(url)
+                    } else if ["mp3", "flac", "m4a", "aac", "opus", "ogg"].contains(ext) {
+                        Task {
+                            if let track = await MetadataReader.readTrack(from: url) {
+                                libraryVM.tracks.append(track)
+                                selectedTrackID = track.id
+                                playerVM.play(track) {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Восстановление сессии
+    
     private func restoreLastSession() {
         guard let state = PlayerStateManager.shared.load() else { return }
         guard let folderURL = libraryVM.restoreLastFolder() else { return }
@@ -152,10 +190,13 @@ struct ContentView: View {
         }
         selectedTrackID = track.id
         playerVM.playPaused(track)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             if state.currentTime > 0 && track.duration > 0 {
                 playerVM.seek(to: state.currentTime / track.duration)
             }
+            userScrolled = false
+            NotificationCenter.default.post(name: NSNotification.Name("ForceResetLyricsView"), object: nil)
         }
     }
     
@@ -180,11 +221,31 @@ struct ContentView: View {
     private func openFolder() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
-        panel.canChooseFiles = false
+        panel.canChooseFiles = true  // ✅ Теперь можно выбирать файлы
         panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.folder, .plainText, .audio]
         panel.message = NSLocalizedString("choose_folder", comment: "")
         panel.begin { response in
-            if response == .OK, let url = panel.url { libraryVM.loadFolder(url) }
+            if response == .OK, let url = panel.url {
+                let ext = url.pathExtension.lowercased()
+                var isDirectory: ObjCBool = false
+                FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+                
+                if isDirectory.boolValue {
+                    libraryVM.loadFolder(url)
+                } else if ext == "m3u" || ext == "m3u8" {
+                    libraryVM.importM3U(url)
+                } else {
+                    // Одиночный трек
+                    Task {
+                        if let track = await MetadataReader.readTrack(from: url) {
+                            libraryVM.tracks.append(track)
+                            selectedTrackID = track.id
+                            playerVM.play(track) {}
+                        }
+                    }
+                }
+            }
         }
     }
 }

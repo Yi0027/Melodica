@@ -11,7 +11,8 @@ struct LyricsView: View {
     @State private var currentIndex: Int = -1
     @State private var ignoreScrollUntil: Date = Date.distantPast
     @State private var canShowButton: Bool = false
-    @State private var isProgrammaticScroll: Bool = false
+    @State private var isProgrammaticScroll = false
+    @State private var hasInitialized: Bool = false
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -23,6 +24,18 @@ struct LyricsView: View {
                 syncButton
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.easeInOut(duration: 0.25), value: userScrolled)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ForceResetLyricsView"))) { _ in
+            currentIndex = -1
+            userScrolled = false
+            hasInitialized = false
+            canShowButton = false
+            updateCurrentIndex(time: currentTime)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                hasInitialized = true
+                canShowButton = true
             }
         }
     }
@@ -38,32 +51,40 @@ struct LyricsView: View {
         .environment(\.defaultMinListRowHeight, 24)
         .coordinateSpace(name: "scrollSpace")
         .onPreferenceChange(ViewOffsetKey.self) { _ in
+            guard hasInitialized else { return }
             guard !isProgrammaticScroll else { return }
-            guard canShowButton else { return }
             guard Date() > ignoreScrollUntil else { return }
             if !userScrolled {
                 userScrolled = true
             }
         }
         .onChange(of: trackId) { _ in
+            hasInitialized = false
             currentIndex = -1
             userScrolled = false
             canShowButton = false
+            isProgrammaticScroll = false
             ignoreScrollUntil = Date().addingTimeInterval(1.0)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                hasInitialized = true
                 canShowButton = true
             }
         }
         .onChange(of: currentIndex) { newIdx in
-            if !userScrolled && newIdx >= 0 {
+            if !userScrolled && newIdx >= 0 && hasInitialized {
                 performProgrammaticScroll(to: newIdx, proxy: proxy)
+            } else if newIdx == -1 {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    proxy.scrollTo(0, anchor: .top)
+                }
             }
         }
         .onChange(of: currentTime) { time in
             updateCurrentIndex(time: time)
         }
         .onChange(of: userScrolled) { scrolled in
-            if !scrolled && currentIndex >= 0 {
+            if !scrolled && currentIndex >= 0 && hasInitialized {
                 performProgrammaticScroll(to: currentIndex, proxy: proxy)
             }
         }
@@ -122,6 +143,7 @@ struct LyricsView: View {
     
     private func performProgrammaticScroll(to index: Int, proxy: ScrollViewProxy) {
         isProgrammaticScroll = true
+        ignoreScrollUntil = Date().addingTimeInterval(0.5)
         withAnimation(.easeOut(duration: 0.3)) {
             proxy.scrollTo(index, anchor: .center)
         }
@@ -135,6 +157,12 @@ struct LyricsView: View {
         for (i, line) in lyrics.enumerated() {
             if time >= line.time { idx = i } else { break }
         }
+        
+        // Если трек закончился — сбрасываем в начало
+        if time >= (lyrics.last?.time ?? 0) + 1.0 && idx == lyrics.count - 1 {
+            idx = -1
+        }
+        
         if idx != currentIndex {
             currentIndex = idx
         }
