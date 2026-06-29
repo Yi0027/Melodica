@@ -25,11 +25,11 @@ To start the song 2 times, click on its title
 
 ## 🖼️ Screenshots
 
-![1](<img width="1710" height="1073" alt="Снимок экрана — 2026-06-29 в 17 04 29" src="https://github.com/user-attachments/assets/1a45f79b-6486-4308-8526-5955e973738c" />)
-![2](<img width="1710" height="1073" alt="Снимок экрана — 2026-06-29 в 17 08 37" src="https://github.com/user-attachments/assets/d7379d61-5d31-4ee0-8bb4-7758e9160964" />)
-![3](<img width="1710" height="1073" alt="Снимок экрана — 2026-06-29 в 17 10 10" src="https://github.com/user-attachments/assets/b86329cb-3974-466e-a81d-246663577929" />)
-![4](<img width="1710" height="1073" alt="Снимок экрана — 2026-06-29 в 17 16 08" src="https://github.com/user-attachments/assets/514c7c64-8263-480b-b2e3-2e4ca34f1cdd" />)
-![5](<img width="1710" height="1112" alt="Снимок экрана — 2026-06-29 в 17 17 08" src="https://github.com/user-attachments/assets/6189f717-a98f-4748-8b73-b79608004598" />)
+![1](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo1.jpeg)
+![2](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo2.jpeg)
+![3](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo3.jpeg)
+![4](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo4.jpeg)
+![5](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo5.jpeg)
 
 
 ---
