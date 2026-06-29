@@ -44,7 +44,7 @@ To start the song 2 times, click on its title
 
 ## 📦 Download
 
-Grab the latest version from [Releases].
+Grab the latest version from [Releases](https://github.com/Yi0027/Melodica/releases/).
 
 **⚠️ Heads up:** Since I didn't pay Apple for a Developer ID (it's expensive and a pain), macOS might block the app on first launch.
 
