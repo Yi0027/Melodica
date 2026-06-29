@@ -1,6 +1,6 @@
 # 🎵 Melodica
 
-> **📌 Quick tip:** If macOS blocks the app on first launch, scroll down to the [Download] section for two simple Terminal commands to fix it.
+> **📌 Quick tip:** If macOS blocks the app on first launch, scroll down to the Download section for two simple Terminal commands to fix it.
 
 No big words or corporate fluff here.  
 This is just a solid, good-looking audio player for macOS that I built for myself, because nothing else on the market felt right.
@@ -17,9 +17,13 @@ If you've also been looking for a lightweight player that actually handles tags 
 - Smart library: sort by title, artist, album, genre, year
 - Album grid view
 - Favorites and playback queue
-- Custom colors (background, accent, text)
+- Custom colors (background, accent, text and more)
 - English & Russian (open setting and select)
-- Media keys support: ⌘F7, F8, F9
+- Media keys support: F7, F8, F9
+- Equalizer (custom)
+- M3U playlist support
+- Drag & Drop files/folders
+- Volume control (fixed previous issues)
 
 ---
 
