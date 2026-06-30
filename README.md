@@ -11,7 +11,7 @@ If you've also been looking for a lightweight player that actually handles tags 
 
 ## ✨ What it can do
 
-- Plays MP3, FLAC, M4A, AAC, OPUS, OGG — no issues
+- Plays MP3, FLAC, M4A, AAC and other AVAudioEngine formats
 - Shows lyrics (synchronized .lrc and embedded ID3)
 - ReplayGain so volume doesn't jump between tracks
 - Smart library: sort by title, artist, album, genre, year
