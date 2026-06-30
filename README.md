@@ -58,6 +58,7 @@ Here's how to open it:
 2. Open **Terminal** and run:
 
 codesign --force --deep --sign - /Applications/Melodica.app
+
 open /Applications/Melodica.app
 
 If that doesn't work, try:
