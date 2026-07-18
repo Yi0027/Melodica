@@ -18,31 +18,29 @@ If you've also been looking for a lightweight player that actually handles tags 
 - Album grid view
 - Favorites and playback queue
 - Custom colors (background, accent, text and more)
-- English & Russian (open setting and select)
+- English & Russian (open settings and select)
 - Media keys support: F7, F8, F9
 - Equalizer (custom)
+- Crossfade between tracks
+- Gapless playback
+- Skip silence
 - M3U playlist support
 - Drag & Drop files/folders
-- Volume control (fixed previous issues)
+- Volume control
 
 ---
 
 ## 🖼️ Screenshots
 
-![1](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo1.jpeg)
-![2](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo2.jpeg)
-![3](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo3.jpeg)
-![4](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo4.jpeg)
-![5](https://github.com/Yi0027/Melodica/blob/main/screenshots/photo5.jpeg)
-
+![main](https://github.com/Yi0027/Melodica/blob/main/screenshots/main.jpg)
+![mini-player](https://github.com/Yi0027/Melodica/blob/main/screenshots/mini-player.jpg)
+![customization](https://github.com/Yi0027/Melodica/blob/main/screenshots/customization.jpg)
 
 ---
 
-
 ## 🔧 Requirements
 
-- macOS 13.0+ (Ventura)
-- Recommended: macOS 14.0+ (Sonoma) for best stability
+- macOS 15.0+ (Sequoia)
 
 ---
 
@@ -58,8 +56,6 @@ Here's how to open it:
 2. Open **Terminal** and run:
 
 codesign --force --deep --sign - /Applications/Melodica.app
-
-open /Applications/Melodica.app
 
 If that doesn't work, try:
 
