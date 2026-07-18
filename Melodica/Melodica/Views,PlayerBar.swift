@@ -1,14 +1,16 @@
-// Views,PlayerBar.swift
+// Views/PlayerBar.swift
 import SwiftUI
 
 struct PlayerBar: View {
     @ObservedObject var playerVM: PlayerViewModel
     let tracks: [Track]
     @Binding var selectedTrackID: UUID?
-    @ObservedObject var eqManager = EqualizerManager.shared
     
-    @State private var showEQ = false
+    @State private var isHoveringCover = false
     @State private var isHoveringProgress = false
+    @State private var showEQ = false
+    @ObservedObject var eqManager = EqualizerManager.shared
+    @ObservedObject var settings = SettingsManager.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -17,24 +19,16 @@ struct PlayerBar: View {
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(Color.white.opacity(0.1))
-                        .frame(height: isHoveringProgress ? 6 : 3)
+                        .frame(height: isHoveringProgress ? 5 : 3)
                     
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(Color.accent)
-                        .frame(width: max(0, geo.size.width * CGFloat(playerVM.progress)), height: isHoveringProgress ? 6 : 3)
-                        .animation(.easeOut(duration: 0.15), value: isHoveringProgress)
+                        .frame(width: max(0, geo.size.width * CGFloat(playerVM.progress)), height: isHoveringProgress ? 5 : 3)
                 }
-                .frame(height: isHoveringProgress ? 14 : 8)
+                .frame(height: isHoveringProgress ? 10 : 8)
                 .contentShape(Rectangle())
                 .onHover { hovering in
-                    withAnimation(.easeOut(duration: 0.15)) {
-                        isHoveringProgress = hovering
-                    }
-                    if hovering {
-                        NSCursor.pointingHand.set()
-                    } else {
-                        NSCursor.arrow.set()
-                    }
+                    withAnimation(.easeOut(duration: 0.15)) { isHoveringProgress = hovering }
                 }
                 .gesture(
                     DragGesture(minimumDistance: 0)
@@ -44,46 +38,48 @@ struct PlayerBar: View {
                         }
                 )
             }
+            .frame(height: 8)
             .padding(.horizontal, 14)
             .padding(.top, 6)
+            .offset(y: -4)
             
-            // Кнопки и информация
             HStack(spacing: 0) {
                 trackInfo.frame(width: 180, alignment: .leading)
                 Spacer()
                 
                 HStack(spacing: 20) {
-                    Button(action: playPrevious) {
+                    Button(action: { playPrevious() }) {
                         Image(systemName: "backward.fill").font(.system(size: 16))
                     }
-                    .disabled(currentIndex == nil || (currentIndex == 0 && !playerVM.shuffleMode))
+                    .disabled(!canGoPrevious)
                     
                     Button(action: {
                         if let current = playerVM.currentTrack {
                             if playerVM.isPlaying { playerVM.togglePlayPause() }
                             else if playerVM.currentTime > 0 { playerVM.togglePlayPause() }
-                            else { playerVM.play(current) { self.playNext() } }
+                            else { playerVM.play(current) { playerVM.playNextTrack() } }
                         } else if let first = tracks.first {
                             selectedTrackID = first.id
-                            playerVM.play(first) { self.playNext() }
+                            playerVM.play(first) { playerVM.playNextTrack() }
                         }
                     }) {
                         Image(systemName: playerVM.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                             .font(.system(size: 34))
                     }
                     
-                    Button(action: playNext) {
+                    Button(action: { playerVM.playNextTrack() }) {
                         Image(systemName: "forward.fill").font(.system(size: 16))
                     }
-                    .disabled(currentIndex == nil || (playerVM.repeatMode == .off && !playerVM.shuffleMode && currentIndex == tracks.count - 1 && playerVM.queue.isEmpty))
+                    .disabled(!canGoNext)
                     
                     Button(action: {
                         playerVM.shuffleMode.toggle()
+                        playerVM.service.clearPreload() 
                         playerVM.saveState()
                     }) {
                         Image(systemName: "shuffle")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(playerVM.shuffleMode ? .accent : .textMuted)
+                            .foregroundColor(playerVM.shuffleMode ? .accent : settings.playerControlsColor.opacity(0.4))
                     }
                     .buttonStyle(.plain)
                     
@@ -97,11 +93,13 @@ struct PlayerBar: View {
                     }) {
                         Image(systemName: playerVM.repeatMode.icon)
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(playerVM.repeatMode.isActive ? .accent : .textMuted)
+                            .foregroundColor(playerVM.repeatMode.isActive ? .accent : settings.playerControlsColor.opacity(0.4))
                     }
                     .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain).foregroundColor(.textMain)
+                .buttonStyle(.plain)
+                .foregroundColor(settings.playerControlsColor)
+                .id(settings.theme.playerControlsR)
                 
                 Spacer()
                 
@@ -109,12 +107,10 @@ struct PlayerBar: View {
                     Button(action: { showEQ.toggle() }) {
                         Image(systemName: "slider.horizontal.3")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(eqManager.isEnabled ? .accent : .textMuted)
+                            .foregroundColor(eqManager.isEnabled ? .accent : settings.playerControlsColor.opacity(0.4))
                     }
                     .buttonStyle(.plain)
-                    .sheet(isPresented: $showEQ) {
-                        EqualizerView()
-                    }
+                    .sheet(isPresented: $showEQ) { EqualizerView() }
                     
                     HStack(spacing: 6) {
                         Image(systemName: playerVM.volume == 0 ? "speaker.slash.fill" : "speaker.fill")
@@ -130,11 +126,31 @@ struct PlayerBar: View {
         .background(Color.darkSurface.opacity(0.92))
     }
     
+    // MARK: - Track Info
+    
     private var trackInfo: some View {
         HStack(spacing: 10) {
             if let track = playerVM.currentTrack {
-                CachedImage(url: track.albumArtURL, size: CGSize(width: 42, height: 42))
-                    .frame(width: 42, height: 42).cornerRadius(5)
+                ZStack {
+                    CachedImage(url: track.thumbURL(size: "84") ?? track.albumArtURL, size: CGSize(width: 42, height: 42))
+                        .id(track.id)
+                        .frame(width: 42, height: 42).cornerRadius(5)
+                    
+                    if isHoveringCover {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 42, height: 42)
+                            .background(Color.black.opacity(0.4))
+                            .cornerRadius(5)
+                    }
+                }
+                .onHover { hovering in
+                    withAnimation(.easeOut(duration: 0.15)) { isHoveringCover = hovering }
+                }
+                .onTapGesture {
+                    NotificationCenter.default.post(name: .toggleMiniPlayer, object: nil)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(track.title).font(.system(size: 12, weight: .medium)).foregroundColor(.textMain).lineLimit(1)
                     Text(track.artist).font(.system(size: 10.5)).foregroundColor(.textMuted).lineLimit(1)
@@ -156,55 +172,50 @@ struct PlayerBar: View {
         .font(.system(size: 11, design: .monospaced)).foregroundColor(.textMuted)
     }
     
-    private var currentIndex: Int? {
-        guard let track = playerVM.currentTrack else { return nil }
-        return tracks.firstIndex(where: { $0.id == track.id })
+    // MARK: - Navigation
+    
+    private var canGoNext: Bool {
+        guard playerVM.currentTrack != nil else { return false }
+        if playerVM.repeatMode == .one { return true }
+        if !playerVM.queue.isEmpty { return true }
+        if !tracks.isEmpty, let current = playerVM.currentTrack,
+           let idx = tracks.firstIndex(where: { $0.id == current.id }) {
+            return idx + 1 < tracks.count || playerVM.repeatMode == .all
+        }
+        return false
+    }
+    
+    private var canGoPrevious: Bool {
+        return playerVM.currentTrack != nil
     }
     
     private func playPrevious() {
+        guard let current = playerVM.currentTrack else { return }
+        
+        if playerVM.currentTime > 10 {
+            playerVM.seek(to: 0)
+            return
+        }
+        
         if playerVM.shuffleMode {
-            let other = tracks.filter { $0.id != playerVM.currentTrack?.id }
-            if let random = other.randomElement() {
-                selectedTrackID = random.id
-                playerVM.play(random) { self.playNext() }
+            playerVM.seek(to: 0)
+            return
+        }
+        
+        if !playerVM.queue.isEmpty {
+            if let idx = playerVM.queue.firstIndex(where: { $0.id == current.id }), idx > 0 {
+                playerVM.play(playerVM.queue[idx - 1]) { playerVM.playNextTrack() }
+                return
             }
+            playerVM.seek(to: 0)
             return
         }
-        guard let idx = currentIndex, idx > 0 else { return }
-        let prev = tracks[idx - 1]
-        selectedTrackID = prev.id
-        playerVM.play(prev) { self.playNext() }
-    }
-    
-    private func playNext() {
-        if let queued = playerVM.playNextInQueue() {
-            selectedTrackID = queued.id
-            playerVM.play(queued) { self.playNext() }
+        
+        guard let idx = tracks.firstIndex(where: { $0.id == current.id }), idx > 0 else {
+            playerVM.seek(to: 0)
             return
         }
-        if playerVM.shuffleMode {
-            let other = tracks.filter { $0.id != playerVM.currentTrack?.id }
-            if let random = other.randomElement() {
-                selectedTrackID = random.id
-                playerVM.play(random) { self.playNext() }
-            }
-            return
-        }
-        guard let idx = currentIndex else { return }
-        if playerVM.repeatMode == .one, let track = playerVM.currentTrack {
-            playerVM.play(track) { self.playNext() }
-            return
-        }
-        if idx + 1 < tracks.count {
-            let next = tracks[idx + 1]
-            selectedTrackID = next.id
-            playerVM.play(next) { self.playNext() }
-        } else if playerVM.repeatMode == .all, let first = tracks.first {
-            selectedTrackID = first.id
-            playerVM.play(first) { self.playNext() }
-        } else {
-            playerVM.stop()
-        }
+        playerVM.play(tracks[idx - 1]) { playerVM.playNextTrack() }
     }
     
     private func formatTime(_ t: TimeInterval) -> String {

@@ -1,4 +1,4 @@
-// Views,SettingsView.swift
+// Views/SettingsView.swift
 import SwiftUI
 
 struct SettingsView: View {
@@ -24,6 +24,7 @@ struct SettingsView: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    // Цветовая тема
                     VStack(alignment: .leading, spacing: 16) {
                         Text(LocalizedStringKey("color_theme"))
                             .font(.system(size: 13, weight: .semibold))
@@ -35,10 +36,64 @@ struct SettingsView: View {
                         ColorRow(label: LocalizedStringKey("text"), r: $settings.theme.textMainR, g: $settings.theme.textMainG, b: $settings.theme.textMainB, alpha: $settings.theme.textMainAlpha)
                         ColorRow(label: LocalizedStringKey("text_secondary"), r: $settings.theme.textMutedR, g: $settings.theme.textMutedG, b: $settings.theme.textMutedB, alpha: $settings.theme.textMutedAlpha)
                         ColorRow(label: LocalizedStringKey("lyrics_text"), r: $settings.theme.lyricActiveR, g: $settings.theme.lyricActiveG, b: $settings.theme.lyricActiveB, alpha: $settings.theme.lyricActiveAlpha)
+                        ColorRow(label: LocalizedStringKey("player_controls"), r: $settings.theme.playerControlsR, g: $settings.theme.playerControlsG, b: $settings.theme.playerControlsB, alpha: $settings.theme.playerControlsAlpha)
                     }
                     
                     Divider().background(Color.white.opacity(0.1))
                     
+                    // Частота обновления прогресс-бара
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(LocalizedStringKey("update_frequency"))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(settings.textMain)
+                        
+                        HStack(spacing: 12) {
+                            Text("\(Int(settings.progressUpdateInterval)) ms")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(settings.textMuted)
+                                .frame(width: 50, alignment: .leading)
+                            
+                            Slider(value: Binding(
+                                get: { settings.progressUpdateInterval },
+                                set: { settings.setProgressInterval($0) }
+                            ), in: 50...1000, step: 50)
+                            .tint(settings.accent)
+                        }
+                        
+                        Text(LocalizedStringKey("update_frequency_hint"))
+                            .font(.system(size: 10))
+                            .foregroundColor(settings.textMuted.opacity(0.5))
+                    }
+                    
+                    Divider().background(Color.white.opacity(0.1))
+                    
+                    // Размер плиток
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(LocalizedStringKey("grid_size"))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(settings.textMain)
+                        
+                        HStack(spacing: 12) {
+                            Text("\(Int(settings.albumGridSize)) pt")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(settings.textMuted)
+                                .frame(width: 50, alignment: .leading)
+                            
+                            Slider(value: Binding(
+                                get: { settings.albumGridSize },
+                                set: { settings.setAlbumGridSize($0) }
+                            ), in: 120...200, step: 10)
+                            .tint(settings.accent)
+                        }
+                        
+                        Text(LocalizedStringKey("grid_size_hint"))
+                            .font(.system(size: 10))
+                            .foregroundColor(settings.textMuted.opacity(0.5))
+                    }
+                    
+                    Divider().background(Color.white.opacity(0.1))
+                    
+                    // Выбор языка
                     VStack(alignment: .leading, spacing: 12) {
                         Text(LocalizedStringKey("language"))
                             .font(.system(size: 13, weight: .semibold))
@@ -68,7 +123,7 @@ struct SettingsView: View {
                             .buttonStyle(.plain)
                         }
                         
-                        Text("Restart the application to apply the language")
+                        Text(LocalizedStringKey("restart_hint"))
                             .font(.system(size: 10))
                             .foregroundColor(settings.textMuted.opacity(0.5))
                     }
@@ -76,7 +131,7 @@ struct SettingsView: View {
                 .padding(16)
             }
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 500, height: 700)
         .background(settings.darkBg)
         .onDisappear {
             settings.saveTheme()
@@ -97,7 +152,6 @@ struct ColorRow: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            // Превью цвета
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color(red: r, green: g, blue: b).opacity(alpha?.wrappedValue ?? 1.0))
                 .frame(width: 24, height: 24)
@@ -109,42 +163,30 @@ struct ColorRow: View {
             Text(label)
                 .font(.system(size: 12))
                 .foregroundColor(.white.opacity(0.7))
-                .frame(width: 80, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             
-            // RGB поля
+            Spacer()
+            
             HStack(spacing: 4) {
-                TextField("0-255", value: Binding(
-                    get: { Int(r * 255) },
-                    set: { r = Double(min(max($0, 0), 255)) / 255.0 }
-                ), format: .number)
+                TextField("0-255", value: Binding(get: { Int(r * 255) }, set: { r = Double(min(max($0, 0), 255)) / 255.0 }), format: .number)
                     .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
                     .frame(width: 45).padding(4).background(Color.white.opacity(0.05)).cornerRadius(4)
                 
-                TextField("0-255", value: Binding(
-                    get: { Int(g * 255) },
-                    set: { g = Double(min(max($0, 0), 255)) / 255.0 }
-                ), format: .number)
+                TextField("0-255", value: Binding(get: { Int(g * 255) }, set: { g = Double(min(max($0, 0), 255)) / 255.0 }), format: .number)
                     .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
                     .frame(width: 45).padding(4).background(Color.white.opacity(0.05)).cornerRadius(4)
                 
-                TextField("0-255", value: Binding(
-                    get: { Int(b * 255) },
-                    set: { b = Double(min(max($0, 0), 255)) / 255.0 }
-                ), format: .number)
+                TextField("0-255", value: Binding(get: { Int(b * 255) }, set: { b = Double(min(max($0, 0), 255)) / 255.0 }), format: .number)
                     .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
                     .frame(width: 45).padding(4).background(Color.white.opacity(0.05)).cornerRadius(4)
             }
             
-            // Прозрачность с подписью
             if let alpha = alpha {
                 VStack(spacing: 2) {
                     Text(LocalizedStringKey("transparency_short"))
                         .font(.system(size: 8))
                         .foregroundColor(.white.opacity(0.35))
-                    TextField("0-100", value: Binding(
-                        get: { Int(alpha.wrappedValue * 100) },
-                        set: { alpha.wrappedValue = Double(min(max($0, 0), 100)) / 100.0 }
-                    ), format: .number)
+                    TextField("0-100", value: Binding(get: { Int(alpha.wrappedValue * 100) }, set: { alpha.wrappedValue = Double(min(max($0, 0), 100)) / 100.0 }), format: .number)
                         .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
                         .frame(width: 45).padding(4).background(Color.white.opacity(0.05)).cornerRadius(4)
                 }

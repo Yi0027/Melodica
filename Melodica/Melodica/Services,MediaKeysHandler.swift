@@ -1,14 +1,13 @@
-// Services,MediaKeysHandler.swift
+// Services/MediaKeysHandler.swift
 import Cocoa
 import SwiftUI
+import MediaPlayer
 
 class MediaKeysHandler {
     static let shared = MediaKeysHandler()
     
-    private var eventMonitor: Any?
     private weak var playerVM: PlayerViewModel?
     private var tracksProvider: (() -> [Track])?
-    private var selectedTrackIDProvider: (() -> Binding<UUID?>?)?
     
     func startMonitoring(
         playerVM: PlayerViewModel,
@@ -18,122 +17,156 @@ class MediaKeysHandler {
     ) {
         self.playerVM = playerVM
         self.tracksProvider = tracks
-        self.playTrack = playTrack
-        self.stopPlayer = stopPlayer
         
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .systemDefined) { [weak self] event in
-            guard let self = self,
-                  let playerVM = self.playerVM else { return event }
-            
-            guard event.type == .systemDefined,
-                  event.subtype.rawValue == 8 else { return event }
-            
-            let keyCode = (event.data1 & 0xFFFF0000) >> 16
-            let keyFlags = (event.data1 & 0x0000FFFF)
-            let keyState = (keyFlags & 0xFF00) >> 8
-            
-            guard keyState == 0xA else { return event }
-            
-            switch Int32(keyCode) {
-            case NX_KEYTYPE_PLAY:
-                DispatchQueue.main.async {
-                    if playerVM.currentTrack != nil {
-                        playerVM.togglePlayPause()
-                    }
-                }
-                return nil
-                
-            case NX_KEYTYPE_NEXT, NX_KEYTYPE_FAST:
-                DispatchQueue.main.async { [weak self] in
-                    self?.handleNext()
-                }
-                return nil
-                
-            case NX_KEYTYPE_PREVIOUS, NX_KEYTYPE_REWIND:
-                DispatchQueue.main.async { [weak self] in
-                    self?.handlePrevious()
-                }
-                return nil
-                
-            default:
-                break
-            }
-            
-            return event
-        }
+        setupRemoteCommands()
     }
     
-    private var playTrack: ((Track, @escaping () -> Void) -> Void)?
-    private var stopPlayer: (() -> Void)?
+    // MARK: - Наушники / Bluetooth / Touch Bar
+    
+    private func setupRemoteCommands() {
+        let center = MPRemoteCommandCenter.shared()
+        
+        center.playCommand.removeTarget(nil)
+        center.pauseCommand.removeTarget(nil)
+        center.togglePlayPauseCommand.removeTarget(nil)
+        center.nextTrackCommand.removeTarget(nil)
+        center.previousTrackCommand.removeTarget(nil)
+        center.changePlaybackPositionCommand.removeTarget(nil)
+        
+        // Play
+        center.playCommand.isEnabled = true
+        center.playCommand.addTarget { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.handleTogglePlayPause()
+                self?.updateNowPlayingInfo()
+            }
+            return .success
+        }
+        
+        // Pause
+        center.pauseCommand.isEnabled = true
+        center.pauseCommand.addTarget { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.handleTogglePlayPause()
+                self?.updateNowPlayingInfo()
+            }
+            return .success
+        }
+        
+        // Toggle Play/Pause (основная команда для большинства наушников)
+        center.togglePlayPauseCommand.isEnabled = true
+        center.togglePlayPauseCommand.addTarget { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.handleTogglePlayPause()
+                self?.updateNowPlayingInfo()
+            }
+            return .success
+        }
+        
+        // Next Track (двойное нажатие)
+        center.nextTrackCommand.isEnabled = true
+        center.nextTrackCommand.addTarget { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.handleNext()
+            }
+            return .success
+        }
+        
+        // Previous Track (тройное нажатие)
+        center.previousTrackCommand.isEnabled = true
+        center.previousTrackCommand.addTarget { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.handlePrevious()
+            }
+            return .success
+        }
+        
+        // Change Playback Position
+        center.changePlaybackPositionCommand.isEnabled = true
+        center.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+                return .commandFailed
+            }
+            DispatchQueue.main.async {
+                guard let playerVM = self?.playerVM, playerVM.duration > 0 else { return }
+                let fraction = event.positionTime / playerVM.duration
+                playerVM.seek(to: fraction)
+                self?.updateNowPlayingInfo()
+            }
+            return .success
+        }
+        
+        updateNowPlayingInfo()
+    }
+    
+    private func handleTogglePlayPause() {
+        guard let playerVM = playerVM else { return }
+        playerVM.togglePlayPause()
+    }
+    
+    private func updateNowPlayingInfo() {
+        guard let playerVM = playerVM else { return }
+        
+        var nowPlayingInfo = [String: Any]()
+        
+        if let currentTrack = playerVM.currentTrack {
+            nowPlayingInfo[MPMediaItemPropertyTitle] = currentTrack.title
+            nowPlayingInfo[MPMediaItemPropertyArtist] = currentTrack.artist
+            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = currentTrack.album ?? ""
+            nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = currentTrack.duration
+            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerVM.currentTime
+            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playerVM.isPlaying ? 1.0 : 0.0
+            
+            // Пробуем загрузить обложку из папки трека
+            let url = currentTrack.url
+            let folder = url.deletingLastPathComponent()
+            let coverNames = ["cover.jpg", "cover.png", "folder.jpg", "folder.png", "artwork.jpg", "artwork.png"]
+            for name in coverNames {
+                let coverURL = folder.appendingPathComponent(name)
+                if let image = NSImage(contentsOf: coverURL) {
+                    let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+                    nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+                    break
+                }
+            }
+        } else {
+            nowPlayingInfo[MPMediaItemPropertyTitle] = "Melodica"
+            nowPlayingInfo[MPMediaItemPropertyArtist] = "Melodica Player"
+            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
+        }
+        
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        MPNowPlayingInfoCenter.default().playbackState = playerVM.isPlaying ? .playing : .paused
+    }
     
     private func handleNext() {
-        guard let playerVM = playerVM,
-              let tracks = tracksProvider?() else { return }
-        
-        // Сначала проверяем очередь
-        if let queued = playerVM.playNextInQueue() {
-            playTrack?(queued) { self.handleNext() }
-            return
-        }
-        
-        // Shuffle
-        if playerVM.shuffleMode {
-            let other = tracks.filter { $0.id != playerVM.currentTrack?.id }
-            if let random = other.randomElement() {
-                playTrack?(random) { self.handleNext() }
-            }
-            return
-        }
-        
-        guard let current = playerVM.currentTrack,
-              let idx = tracks.firstIndex(where: { $0.id == current.id }) else { return }
-        
-        // Repeat one
-        if playerVM.repeatMode == .one {
-            playTrack?(current) { self.handleNext() }
-            return
-        }
-        
-        // Next track
-        if idx + 1 < tracks.count {
-            let next = tracks[idx + 1]
-            playTrack?(next) { self.handleNext() }
-        } else if playerVM.repeatMode == .all, let first = tracks.first {
-            playTrack?(first) { self.handleNext() }
-        } else {
-            stopPlayer?()
+        guard let playerVM = playerVM else { return }
+        playerVM.playNextTrack()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.updateNowPlayingInfo()
         }
     }
-    
+
     private func handlePrevious() {
-        guard let playerVM = playerVM,
-              let tracks = tracksProvider?() else { return }
-        
-        // Shuffle
-        if playerVM.shuffleMode {
-            let other = tracks.filter { $0.id != playerVM.currentTrack?.id }
-            if let random = other.randomElement() {
-                playTrack?(random) { self.handleNext() }
-            }
-            return
+        guard let playerVM = playerVM else { return }
+        playerVM.playPreviousTrack()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.updateNowPlayingInfo()
         }
-        
-        guard let current = playerVM.currentTrack,
-              let idx = tracks.firstIndex(where: { $0.id == current.id }),
-              idx > 0 else { return }
-        
-        let prev = tracks[idx - 1]
-        playTrack?(prev) { self.handleNext() }
     }
     
     func stopMonitoring() {
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-            eventMonitor = nil
-        }
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.removeTarget(nil)
+        center.pauseCommand.removeTarget(nil)
+        center.togglePlayPauseCommand.removeTarget(nil)
+        center.nextTrackCommand.removeTarget(nil)
+        center.previousTrackCommand.removeTarget(nil)
+        center.changePlaybackPositionCommand.removeTarget(nil)
+        
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        
         playerVM = nil
         tracksProvider = nil
-        playTrack = nil
-        stopPlayer = nil
     }
 }

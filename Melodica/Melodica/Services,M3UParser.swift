@@ -3,33 +3,32 @@ import Foundation
 
 enum M3UParser {
     
-    /// Импорт M3U файла — возвращает имя плейлиста и список URL треков
     static func parse(_ url: URL) -> (name: String, urls: [URL]) {
         guard let content = try? String(contentsOf: url, encoding: .utf8)
                 ?? String(contentsOf: url, encoding: .isoLatin1) else {
             return (url.deletingPathExtension().lastPathComponent, [])
         }
-        
-        let baseDir = url.deletingPathExtension().deletingLastPathComponent()
+        let baseDir = url.deletingLastPathComponent()
+        let defaultName = url.deletingPathExtension().lastPathComponent
+        return parseContent(content, baseDir: baseDir, defaultName: defaultName)
+    }
+    
+    static func parseContent(_ content: String, baseDir: URL, defaultName: String) -> (name: String, urls: [URL]) {
         var urls: [URL] = []
-        var playlistName = url.deletingPathExtension().lastPathComponent
+        var playlistName = defaultName
         
         for line in content.components(separatedBy: .newlines) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             
             if trimmed.isEmpty { continue }
             
-            // Ищем имя плейлиста
             if trimmed.uppercased().hasPrefix("#PLAYLIST:") {
                 let name = trimmed.replacingOccurrences(of: "#PLAYLIST:", with: "", options: .caseInsensitive)
                     .trimmingCharacters(in: .whitespaces)
-                if !name.isEmpty {
-                    playlistName = name
-                }
+                if !name.isEmpty { playlistName = name }
                 continue
             }
             
-            // Пропускаем другие комментарии
             if trimmed.hasPrefix("#") { continue }
             
             let trackURL: URL
@@ -49,7 +48,7 @@ enum M3UParser {
         return (playlistName, urls)
     }
     
-    /// Экспорт в M3U
+    /// Экспорт в M3U (заготовка))
     static func export(playlist: (name: String, tracks: [Track]), to url: URL) {
         var lines: [String] = []
         lines.append("#EXTM3U")
