@@ -11,10 +11,12 @@ If you've also been looking for a lightweight player that actually handles tags 
 
 ## ✨ What it can do
 
+- Two interface themes: classic and new Liquid Glass (macOS 26+)
 - Plays MP3, FLAC, M4A, AAC and other AVAudioEngine formats
 - Shows lyrics (synchronized .lrc and embedded ID3)
 - ReplayGain so volume doesn't jump between tracks
-- Smart library: sort by title, artist, album, genre, year
+- Rating support (read from tags)
+- Smart library: sort by title, artist, album, genre, year, rating
 - Album grid view
 - Favorites and playback queue
 - Custom colors (background, accent, text and more)
@@ -23,8 +25,10 @@ If you've also been looking for a lightweight player that actually handles tags 
 - Equalizer (custom)
 - Crossfade between tracks
 - Gapless playback
-- Skip silence
+- Silence Skip
 - M3U playlist support
+- Smart playlists (rules-based)
+- CUE sheet support
 - Drag & Drop files/folders
 - Volume control
 
@@ -32,15 +36,18 @@ If you've also been looking for a lightweight player that actually handles tags 
 
 ## 🖼️ Screenshots
 
-![main](https://github.com/Yi0027/Melodica/blob/main/screenshots/main.jpg)
-![mini-player](https://github.com/Yi0027/Melodica/blob/main/screenshots/mini-player.jpg)
-![customization](https://github.com/Yi0027/Melodica/blob/main/screenshots/customization.jpg)
+*Screenshots use royalty-free music from [Jamendo](https://www.jamendo.com).*
+
+![Right panel](https://github.com/Yi0027/Melodica/blob/main/screenshots/right%20panel.jpg)
+![Spectrum](https://github.com/Yi0027/Melodica/blob/main/screenshots/spectrum.jpg)
+![MiniPlayer](https://github.com/Yi0027/Melodica/blob/main/screenshots/miniplayer.jpg)
 
 ---
 
 ## 🔧 Requirements
 
-- macOS 15.0+ (Sequoia)
+- macOS 15.0+ (Sequoia) — minimum
+- macOS 26.0+ (Tahoe) — recommended: enables the new Liquid Glass design
 
 ---
 
@@ -55,8 +62,13 @@ Here's how to open it:
 1. Move `Melodica.app` to your `Applications` folder.
 2. Open **Terminal** and run:
 
+```bash
 codesign --force --deep --sign - /Applications/Melodica.app
+```
 
-If that doesn't work, try:
+ If that doesn't work, try:
 
+```bash
 sudo xattr -cr /Applications/Melodica.app
+```
+
