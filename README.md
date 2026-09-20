@@ -22,8 +22,8 @@ If you've also been looking for a lightweight player that actually handles tags 
 ## ✨ What it can do
 
 - Two interface themes: classic and new **Liquid Glass**
-- Plays MP3, FLAC, M4A, AAC and other AVAudioEngine formats
-  *(official support: MP3, FLAC, M4A, OGG, OPUS)*
+- Plays MP3, FLAC, M4A, AAC and other formats supported by the playback engine
+*(tested with MP3, FLAC, M4A, OGG and OPUS)*
 - Shows lyrics (synchronized .lrc and embedded ID3)
 - **Custom LRC engine** built on Core Animation with **word-by-word highlighting** and **full LRC metadata support**
 - ReplayGain so volume doesn't jump between tracks
@@ -33,8 +33,8 @@ If you've also been looking for a lightweight player that actually handles tags 
 - Favorites and playback queue
 - Custom colors (background, accent, text and more)
 - English & Russian (open settings and select)
-- Media keys support: ⌘F7, F8, F9
-- **Menu bar player** (control from the system tray)
+- Media keys support: F7, F8, F9
+- **Menu bar player** (control from the menu bar)
 - Equalizer (custom) with **presets** and **auto-apply by genre**
 - Crossfade between tracks
 - Gapless playback
@@ -92,6 +92,12 @@ Either way, if you find something broken — open an issue.
 ### Option 1 — Homebrew (recommended)
 
 The easiest way. Homebrew installs the app and handles the macOS quarantine + ad-hoc signing automatically — no Terminal commands needed after install.
+
+> **Don't have Homebrew yet?**  
+> Install it first — it's one command and takes a few minutes:  
+> https://brew.sh
+
+To install:
 
 ```bash
 brew tap yi0027/melodica
