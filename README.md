@@ -119,13 +119,45 @@ brew untap yi0027/melodica
 
 ### Option 2 — Direct download
 
-Grab the latest `.dmg` from [Releases](https://github.com/Yi0027/Melodica/releases/).
+Grab the latest `.dmg` from [Releases](https://github.com/Yi0027/Melodica/releases/), open it, and drag `Melodica.app` into your `Applications` folder.
 
-Since I didn't pay Apple for a Developer ID (it's expensive and a pain), macOS might block the app on first launch when installed manually.
+Since I didn't pay Apple for a Developer ID (it's expensive and a pain), macOS will show a warning on first launch: *"Melodica cannot be opened because the developer cannot be verified."* This is expected — the app is ad-hoc signed, just not notarized by Apple.
 
-**Before signing the app, make sure `codesign` is available on your Mac.**
+**To open it:**
 
-`codesign` ships with either **Xcode** or **Command Line Tools**. If you've never installed either, open Terminal and run:
+1. Try to open `Melodica.app` from your `Applications` folder. You'll see the warning — dismiss it (click **Done** or **Cancel**).
+2. Open **System Settings** → **Privacy & Security**.
+3. Scroll down to the **Security** section. You'll see a message like *"Melodica.app was blocked from use because it is not from an identified developer."*
+4. Click **Open Anyway**.
+5. Enter your password if prompted, then click **Open** in the final dialog.
+
+You only need to do this once. After that, the app opens normally with a double-click.
+
+> **Note:** The **Open Anyway** button is only available for about an hour after you try to open the app. If you don't see it, try launching `Melodica.app` again, then go back to System Settings → Privacy & Security.
+
+---
+
+#### If that doesn't work
+
+On some macOS versions, the **Open Anyway** button doesn't appear reliably. In that case, open **Terminal** and run:
+
+```bash
+sudo xattr -cr /Applications/Melodica.app
+```
+
+This removes the quarantine flag that macOS adds to files downloaded from the internet. After that, the app opens normally.
+
+> **Note:** `xattr` ships with macOS by default — no additional install needed.
+
+---
+
+#### Last resort: re-signing the app
+
+> ⚠️ **You almost certainly don't need this.** Try the steps above first. Re-signing is only useful if the app genuinely refuses to launch *and* `xattr` didn't help.
+
+The app ships with a valid ad-hoc signature, so macOS can verify its integrity. But if something went wrong during download or extraction, you can re-sign it locally:
+
+1. Make sure `codesign` is available on your Mac. It ships with either **Xcode** or **Command Line Tools**. If you've never installed either, open Terminal and run:
 
 ```bash
 xcode-select --install
@@ -134,20 +166,13 @@ xcode-select --install
 A system dialog will appear — click Install and wait a few minutes.  
 Requires ~2 GB of free disk space. You don't need an Apple ID — just click Install in the dialog.
 
-When you are sure `codesign` is available:
-
-1. Move `Melodica.app` to your `Applications` folder.
-2. Open **Terminal** and run:
+2. Then re-sign the app:
 
 ```bash
 codesign --force --sign - /Applications/Melodica.app
 ```
 
-If that doesn't work, try:
-
-```bash
-sudo xattr -cr /Applications/Melodica.app
-```
+> **Note:** This overwrites the app's original signature with a fresh ad-hoc one, generated on your machine. It works in most cases, but if the app contains nested frameworks, re-signing can occasionally break them. Prefer the System Settings method whenever possible.
 
 Alternative: if you'd rather not touch Terminal at all, clone the repository in Xcode and hit **Cmd+R**. Xcode will ad-hoc sign the build automatically.
 
